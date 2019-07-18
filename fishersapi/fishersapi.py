@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from scipy import stats
+import itertools
 
 __all__ = ['fishers_vec',
            'fishers_frame']
@@ -131,7 +132,11 @@ def fishers_frame(df, cols, count_col=None, alternative='two-sided'):
                              resDf['A0_B1'].values,
                              resDf['A1_B0'].values,
                              resDf['A1_B1'].values, alternative=alternative)
-    resDf = resDf.assign(OR=OR, pvalue=pvalue)
+    resDf = resDf.assign(OR=OR, pvalue=pvalue,
+                            A0_B0=resDf.A0_B0.astype(int),
+                            A0_B1=resDf.A0_B1.astype(int),
+                            A1_B0=resDf.A1_B0.astype(int),
+                            A1_B1=resDf.A1_B1.astype(int))
     return resDf
 
 def _count_2_by_2(df, node1, node2, count_col=None):
@@ -151,15 +156,16 @@ def _count_2_by_2(df, node1, node2, count_col=None):
     
     col1, val1 = node1
     col2, val2 = node2
-
-    tmp = df[[col1, col2, count_col]].dropna()
+    
     tab = np.zeros((2, 2))
     if count_col is None:
+        tmp = df[[col1, col2]].dropna()
         tab[0, 0] = (((tmp[col1]!=val1) & (tmp[col2]!=val2))).sum()
         tab[0, 1] = (((tmp[col1]!=val1) & (tmp[col2]==val2))).sum()
         tab[1, 0] = (((tmp[col1]==val1) & (tmp[col2]!=val2))).sum()
         tab[1, 1] = (((tmp[col1]==val1) & (tmp[col2]==val2))).sum()
     else:
+        tmp = df[[col1, col2, count_col]].dropna()
         tab[0, 0] = (((tmp[col1]!=val1) & (tmp[col2]!=val2)) * tmp[count_col]).sum()
         tab[0, 1] = (((tmp[col1]!=val1) & (tmp[col2]==val2)) * tmp[count_col]).sum()
         tab[1, 0] = (((tmp[col1]==val1) & (tmp[col2]!=val2)) * tmp[count_col]).sum()
