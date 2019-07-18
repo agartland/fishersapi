@@ -1,7 +1,7 @@
 ## fishersapi
 [![Build Status](https://travis-ci.com/agartland/fishersapi.svg?branch=master)](https://travis-ci.com/agartland/fishersapi)
 
-A package that for applying a fast implementation of Fisher's exact test to observations in a pandas DataFrame.
+A package for applying a fast implementation of Fisher's exact test to observations in a pandas DataFrame.
 
 Contingency tables are computed based on all pairs of columns in cols and all pairs of unique values within the columns.
 The results are tested against scipy.stats.fishers_exact and fallback on scipy if the faster brentp/fishers_exact_test (~1000x faster) is not installed.
