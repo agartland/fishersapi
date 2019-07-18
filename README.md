@@ -1,5 +1,5 @@
 ## fishersapi
-[![Build Status](https://travis-ci.org/uwescience/fishersapi.svg?branch=master)](https://travis-ci.org/uwescience/fishersapi)
+[![Build Status](https://travis-ci.org/agartland/fishersapi.svg?branch=master)](https://travis-ci.org/agartland/fishersapi)
 
 An API for applying a fast Fisher's Exact Test to variable pairs in pandas DataFrames
 
