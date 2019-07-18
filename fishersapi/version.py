@@ -26,50 +26,39 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
                "Topic :: Scientific/Engineering"]
 
 # Description should be a one-liner:
-description = "shablona: a template for small scientific Python projects"
+description = "fishersapi: An API for applying a fast Fisher's Exact Test to variable pairs in pandas DataFrames"
 # Long description will go up on the pypi page
 long_description = """
 
-Shablona
+fishersapi
 ========
-Shablona is a template project for small scientific Python projects.
-
-It contains software implementations of an analysis of some simple data, but
-more importantly, it contains infrastructure for testing, documentation,
-continuous integration and deployment, which can be easily adapted
-to use in other projects.
-
-To get started using these components in your own software, please go to the
-repository README_.
-
-.. _README: https://github.com/uwescience/shablona/blob/master/README.md
+fishersapi provides an interface for running a fast implementation
+of Fisher's exact test for 2x2 tables on categorical data in 
+a pandas.DataFrame. The results are tested against scipy.stats.fishers_exact
+and fallback on scipy if the faster brentp/fishers_exact_test (~1000x faster)
+is not installed.
 
 License
 =======
-``shablona`` is licensed under the terms of the MIT license. See the file
+``fishersapi`` is licensed under the terms of the MIT license. See the file
 "LICENSE" for information on the history of this software, terms & conditions
 for usage, and a DISCLAIMER OF ALL WARRANTIES.
-
-All trademarks referenced herein are property of their respective holders.
-
-Copyright (c) 2015--, Ariel Rokem, The University of Washington
-eScience Institute.
 """
 
-NAME = "shablona"
-MAINTAINER = "Ariel Rokem"
-MAINTAINER_EMAIL = "arokem@gmail.com"
+NAME = "fishersapi"
+MAINTAINER = "Andrew Fiore-Gartland"
+MAINTAINER_EMAIL = "agartlan@fredhutch.org"
 DESCRIPTION = description
 LONG_DESCRIPTION = long_description
-URL = "http://github.com/uwescience/shablona"
+URL = "http://github.com/agartland/fishersapi"
 DOWNLOAD_URL = ""
 LICENSE = "MIT"
-AUTHOR = "Ariel Rokem"
-AUTHOR_EMAIL = "arokem@gmail.com"
+AUTHOR = "Andrew Fiore-Gartland"
+AUTHOR_EMAIL = "agartlan@fredhutch.org"
 PLATFORMS = "OS Independent"
 MAJOR = _version_major
 MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
-PACKAGE_DATA = {'shablona': [pjoin('data', '*')]}
-REQUIRES = ["numpy"]
+PACKAGE_DATA = {}
+REQUIRES = ['numpy', 'scipy', 'pandas']
