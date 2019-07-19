@@ -61,4 +61,4 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {}
-REQUIRES = ['numpy', 'scipy', 'pandas']
+REQUIRES = ['numpy', 'scipy', 'pandas', 'fisher', 'statsmodels']
