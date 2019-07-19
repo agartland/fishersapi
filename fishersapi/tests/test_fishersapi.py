@@ -64,3 +64,13 @@ def test_fishers_frame():
     npt.assert_allclose(resDf.OR.values[:3], [3.85714286, 2.05714286, 0.72916667])
 
     resDf = fishersapi.fishers_frame(df, ['VA', 'JA', 'VB', 'JB'], count_col='Count', alternative='two-sided')
+
+def test_options():
+    np.random.seed(110820)
+    n = 200
+    df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23', 'TRAV11', 'TRAV6'], n),
+                       'JA':np.random.choice(['TRAJ4', 'TRAJ2', 'TRAJ3','TRAJ5', 'TRAJ21', 'TRAJ13'], n),
+                       'VB':np.random.choice(['TRBV14', 'TRBV12', 'TRBV3', 'TRBV23', 'TRBV11', 'TRBV6'], n),
+                       'JB':np.random.choice(['TRBJ4', 'TRBJ2', 'TRBJ3','TRBJ5', 'TRBJ21', 'TRBJ13'], n)})
+
+    resDf = fishersapi.fishers_frame(df, col_pairs=[('VA', 'JA'), ('VB', 'JB')], adj_method='holm')
