@@ -23,13 +23,16 @@ def test_fishers_vec():
     
     for alt in ['two-sided', 'less', 'greater']:
         ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative=alt)
-        
         scipy_pvalues, scipy_ORs = np.zeros(n), np.zeros(n)
         for i in range(n):
             scipy_ORs[i], scipy_pvalues[i] = stats.fisher_exact([[a[i], b[i]], [c[i], d[i]]], alternative=alt)
-
     npt.assert_allclose(ORs, scipy_ORs, rtol=1e-4)
     npt.assert_allclose(pvalues, scipy_pvalues, rtol=1e-4)
+
+def test_integers():
+    OR, pvalue = fishersapi.fishers_vec(10, 2, 15, 3)
+    assert np.isscalar(OR)
+    assert np.isscalar(pvalue)
 
 def test_benchmark():
     a, b, c, d = _gen_rand_abcd()

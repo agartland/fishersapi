@@ -47,6 +47,7 @@ Parameters
 ----------
 a, b, c, d : shape (n,) ndarrays
     Vector of counts (will be cast as uint8 for operation)
+    Also accepts scalars, in which case output will also be a scalar.
 alternative : string
     Specfies the alternative hypothesis (similar to scipy.fisher_exact)
     Options: 'two-sided', 'less', 'greater' where less is "left-tailed"
@@ -65,6 +66,12 @@ try:
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided'):
+        scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
+        a = np.asarray(a).ravel()
+        b = np.asarray(b).ravel()
+        c = np.asarray(c).ravel()
+        d = np.asarray(d).ravel()
+
         assert len(a) == len(b)
         assert len(a) == len(c)
         assert len(a) == len(d)
@@ -74,14 +81,17 @@ try:
 
         res = fisher.pvalue_npy(a.astype(np.uint), b.astype(np.uint), c.astype(np.uint), d.astype(np.uint))
         if alternative in ['two-sided', 'two-tailed']:
-            return (OR, res[2])
+            out = (OR, res[2])
         elif alternative in ['less', 'left-tailed']:
-            return (OR, res[0])
+            out = (OR, res[0])
         elif alternative in ['greater', 'right-tailed']:
-            return (OR, res[1])
+            out = (OR, res[1])
         else:
             print('Please specify an alternative: two-sided, less, or greater')
-            return OR, np.nan * np.zeros((len(a), 1))
+            out = OR, np.nan * np.zeros((len(a), 1))
+        if scalar:
+            out = (out[0][0], out[1][0])
+        return out
     
 except ImportError:
     from scipy import stats
@@ -89,12 +99,28 @@ except ImportError:
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided'):
+        scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
+
+        a = np.asarray(a).ravel()
+        b = np.asarray(b).ravel()
+        c = np.asarray(c).ravel()
+        d = np.asarray(d).ravel()
+
+        assert len(a) == len(b)
+        assert len(a) == len(c)
+        assert len(a) == len(d)
+
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             OR = (a*d) / (b*c)
 
         p = np.asarray([stats.fisher_exact([[aa, bb], [cc, dd]], alternative=alternative)[1] for aa, bb, cc, dd in zip(a, b, c, d)])
-        return OR, p
+
+        if scalar:
+            out = (OR[0], p[0])
+        else:
+            out = (OR, p)
+        return out
     
 def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='two-sided', adj_method=None):
     """Use Fisher's Exact Test to scan for associations between values
