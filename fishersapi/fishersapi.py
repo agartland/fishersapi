@@ -62,7 +62,7 @@ p : shape (n,) ndarray
 try:
     """Attempt to use the fisher library (cython) if available (>1000x speedup)"""
     import fisher
-    print("Using Cython-powered Fisher's exact test")
+    #print("Using Cython-powered Fisher's exact test")
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided'):
