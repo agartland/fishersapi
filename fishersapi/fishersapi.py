@@ -13,8 +13,6 @@ except ImportError:
 
 __all__ = ['fishers_vec',
            'fishers_frame']
-"""TODO: Attempt to import brentp/fisher_exact_test and/or vectorized version of 
-painyeph/FishersExactTest and/or falls back on scipy.stats.fishers?"""
 
 def _add_docstring(doc):
     def dec(obj):
@@ -122,19 +120,47 @@ except ImportError:
             out = (OR, p)
         return out
     
-def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='two-sided', adj_method=None):
-    """Use Fisher's Exact Test to scan for associations between values
-    in each of the columns of the DataFrame. Tests all pairs of columns in cols
-    and all pairs of unique values in the column pairs.
+def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='two-sided', adj_method=None, min_n=0):
+    """Prepare counts tables and perform rapid testing for associations
+    between two or more categorical variables (columns) of a DataFrame
+    (df). Tallies pairs of values within pairs of columns, which
+    are then evaluated as 2 x 2 contingency tables using Fisher's exact
+    test. While this is not the best way to model associations among
+    multinomial distributed variables, it will work as an initial screen.
+
+    Unique values of each column in cols will be tallied against
+    unique values of all other columns in cols. Column pairs (col_pairs) can
+    be directly specified as an alternative. If col_pairs is None then all
+    pairs of values in cols will be tallied. If both are None then all pairs
+    of allcolumns will be used.
+
+    Each row is a 2x2 contingency table:
+    
+       Y+  Y-
+    X+ 4   8
+    X- 9   3
+
+    where X+/- indicates the number of row counts with x_col == x_val.
+
+    A count of X+Y+, X+Y-, X-Y+, X-Y-, frequencies and odds-ratio are provided
+    for each combination (row) of the output.
 
     Tests should be subject to multiple hypothesis testing adjustment
     to protect against false discovery.
 
+    Example
+    -------
+
+    res = fishersapi.fishers_frame(df,
+                                   cols=['VA', 'JA', 'VB', 'JB'],
+                                   count_col='Count',
+                                   alternative='two-sided')
+   
     Parameters
     ----------
     df : pd.DataFrame
     cols : tuple or list of strings
-        Column names to test in df. Will test all pairs.
+        Column names to test in df. Will test all pairs unless specified by col_pairs.
     col_pairs : list of tuples
         Pairs of columns names for testing. If specified, will replace cols.
     count_col : str
@@ -145,11 +171,13 @@ def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='tw
         Options: 'two-sided', 'less', 'greater' where less is "left-tailed"
     adj_method : str
         Method for multiplicity adjustment using statsmodels.stats.multipletests, e.g.
-        holm, bonferroni, fdr_bh 
+        holm, bonferroni, fdr_bh
+    min_n : int
+        Minimum number of X+Y+ counts required for it to be included in output and testing.
 
     Returns
     -------
-    resDf : pd.DataFrame [n tests x colA, colB, valA, valB, A0_B0, A0_B1, A1_B0, A1_B1, OR, pvalue]
+    res : pd.DataFrame [n tests x result columns, OR, pvalue]
         Odds-ratio, pvalue and contingency table for each of the tests performed."""
     if cols is None:
         cols = df.columns
@@ -160,70 +188,84 @@ def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='tw
     res = []
     for col1, col2 in col_pairs:
         for val1, val2 in itertools.product(df[col1].dropna().unique(), df[col2].dropna().unique()):
-            tab = _count_2_by_2(df, (col1, val1), (col2, val2), count_col=count_col)
-            res.append({'ColA':col1,
-                        'ColB':col2,
-                        'ValA':val1,
-                        'ValB':val2,
-                        'A0_B0':tab[0, 0],
-                        'A0_B1':tab[0, 1],
-                        'A1_B0':tab[1, 0],
-                        'A1_B1':tab[1, 1]})
-    resDf = pd.DataFrame(res)
-    OR, pvalue = fishers_vec(resDf['A0_B0'].values,
-                             resDf['A0_B1'].values,
-                             resDf['A1_B0'].values,
-                             resDf['A1_B1'].values, alternative=alternative)
+            tmp = _count_2_by_2(df, (col1, val1), (col2, val2), count_col=count_col)
+            res.append(tmp)
+    res = pd.DataFrame(res)
+
+    """Drop rows that have fewer than min_n X+Y+ counts for efficiency"""
+    res = res.loc[res['X+Y+'] >= min_n]
+
+    OR, pvalue = fishers_vec(res['X+Y+'].values,
+                             res['X+Y-'].values,
+                             res['X-Y+'].values,
+                             res['X-Y-'].values, alternative=alternative)
     
-    resDf = resDf.assign(OR=OR, pvalue=pvalue,
-                            A0_B0=resDf.A0_B0.astype(int),
-                            A0_B1=resDf.A0_B1.astype(int),
-                            A1_B0=resDf.A1_B0.astype(int),
-                            A1_B1=resDf.A1_B1.astype(int))
+    res = res.assign(OR=OR, pvalue=pvalue)
 
     if SM and not adj_method is None:
         if adj_method in ['bonferroni', 'holm']:
             k = 'FWER-pvalue'
         elif 'fdr' in adj_method:
             k = 'FDR-qvalue'
-        resDf = resDf.assign(**{k:adjustnonnan(resDf['pvalue'], method=adj_method)})
-    return resDf
+        res = res.assign(**{k:adjustnonnan(res['pvalue'], method=adj_method)})
+    return res
 
 def _count_2_by_2(df, node1, node2, count_col=None):
-    """Test if the occurence of nodeA paired with nodeB is more/less frequent than expected.
+    """Tally instances of node1 and node2 where a node is
+    the combination of a column and a value.
+
+    E.g. hair color (col1) red (val1) and eye color (col2) blue (val2)
 
     Parameters
     ----------
+    df : pd.DataFrame
+        Contains columns in node1 and node2 and optionally a count column
     nodeX : tuple (column, value)
         Specify the node by its column name and the value.
+    count-col : str
+        Column in df containing integer counts of the instances of each row
 
     Returns
     -------
-    OR : float
-        Odds-ratio associated with the 2x2 contingency table
-    pvalue : float
-        P-value associated with the Fisher's exact test that H0: OR = 1"""
+    out : dict
+        Various labels, frequencies and counts associated with the
+        contingency table created by node1 and node2"""
     
     col1, val1 = node1
     col2, val2 = node2
     
-    tab = np.zeros((2, 2))
     if count_col is None:
-        tmp = df[[col1, col2]].dropna()
-        tab[0, 0] = (((tmp[col1]!=val1) & (tmp[col2]!=val2))).sum()
-        tab[0, 1] = (((tmp[col1]!=val1) & (tmp[col2]==val2))).sum()
-        tab[1, 0] = (((tmp[col1]==val1) & (tmp[col2]!=val2))).sum()
-        tab[1, 1] = (((tmp[col1]==val1) & (tmp[col2]==val2))).sum()
+        count_col = ''
+        counts = np.ones(df.shape[0])
     else:
-        tmp = df[[col1, col2, count_col]].dropna()
-        tab[0, 0] = (((tmp[col1]!=val1) & (tmp[col2]!=val2)) * tmp[count_col]).sum()
-        tab[0, 1] = (((tmp[col1]!=val1) & (tmp[col2]==val2)) * tmp[count_col]).sum()
-        tab[1, 0] = (((tmp[col1]==val1) & (tmp[col2]!=val2)) * tmp[count_col]).sum()
-        tab[1, 1] = (((tmp[col1]==val1) & (tmp[col2]==val2)) * tmp[count_col]).sum()
-    return tab
+        counts = df[count_col].values
+
+    aind = (df[col1] == val1) & (df[col2] == val2)
+    bind = (df[col1] == val1) & (df[col2] != val2)
+    cind = (df[col1] != val1) & (df[col2] == val2)
+    dind = (df[col1] != val1) & (df[col2] != val2)
+    
+    n = counts.sum()
+    w = np.sum(aind.astype(int).values * counts)
+
+    tmp = {'xcol':col1,
+           'xval':val1,
+           'ycol':col2,
+           'yval':val2,
+           'X+Y+':w,
+           'X+Y-':np.sum(bind.astype(int).values * counts),
+           'X-Y+':np.sum(cind.astype(int).values * counts),
+           'X-Y-':np.sum(dind.astype(int).values * counts)}
+    tmp.update({'X_marg':(tmp['X+Y+'] + tmp['X+Y-']) / n,
+                'Y_marg':(tmp['X+Y+'] + tmp['X-Y+']) / n,
+                'X|Y+':tmp['X+Y+'] / (tmp['X+Y+'] + tmp['X-Y+']),
+                'X|Y-':tmp['X+Y-'] / (tmp['X+Y-'] + tmp['X-Y-']),
+                'Y|X+':tmp['X+Y+'] / (tmp['X+Y+'] + tmp['X+Y-']),
+                'Y|X-':tmp['X-Y+'] / (tmp['X-Y+'] + tmp['X-Y-'])})
+    return tmp
 
 def adjustnonnan(pvalues, method='holm'):
-    """Convenient function for doing p-value adjustment.
+    """Convenience function for doing p-value adjustment.
     Accepts any matrix shape and adjusts across the entire matrix.
     Ignores nans appropriately.
 
