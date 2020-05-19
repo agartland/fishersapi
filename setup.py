@@ -26,11 +26,11 @@ opts = dict(name='fisherapiX', # replace 'fisherapitest' with NAME once you are 
             #install_requires=REQUIRES,
             requires=REQUIRES)
 
-install_requires = ['numpy>=1.16.4',
-                    'pandas>=0.24.2',
-                    'scipy>=1.2.1',
-                    'fisher>=0.1.9'
-                    'statsmodels>=0.10.1'] 
+install_requires = ['numpy',
+                    'pandas',
+                    'scipy',
+                    'fisher'
+                    'statsmodels'] 
 
 if __name__ == '__main__':
     setup(**opts, install_requires = install_requires)
