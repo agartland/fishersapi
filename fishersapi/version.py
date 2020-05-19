@@ -29,7 +29,8 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
 description = "fishersapi: An API for applying a fast Fisher's Exact Test to variable pairs in pandas DataFrames"
 
 # read the contents of your README file into long_description
-this_directory = path.abspath(path.dirname(path.dirname(__file__)))
+this_directory = path.abspath(path.dirname(__file__))
+print(this_directory)
 
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()    
