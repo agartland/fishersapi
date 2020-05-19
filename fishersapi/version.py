@@ -4,7 +4,7 @@ from os import path
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
 _version_major = 0
 _version_minor = 1
-_version_micro = ''  # use '' for first of series, number for 1 and above
+_version_micro = 1  # use '' for first of series, number for 1 and above
 #_version_extra = 'dev'
 _version_extra = ''  # Uncomment this for full releases
 
@@ -28,19 +28,10 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
 # Description should be a one-liner:
 description = "fishersapi: An API for applying a fast Fisher's Exact Test to variable pairs in pandas DataFrames"
 
-# read the contents of your README file into long_description
-this_directory = path.abspath(path.dirname(__file__))
-print(this_directory)
-
-with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()    
-
 NAME = "fishersapi"
 MAINTAINER = "Andrew Fiore-Gartland"
 MAINTAINER_EMAIL = "agartlan@fredhutch.org"
 DESCRIPTION = description
-LONG_DESCRIPTION = long_description
-LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown' 
 URL = "http://github.com/agartland/fishersapi"
 DOWNLOAD_URL = ""
 LICENSE = "MIT"

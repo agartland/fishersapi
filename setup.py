@@ -7,12 +7,18 @@ ver_file = os.path.join('fishersapi', 'version.py')
 with open(ver_file) as f:
     exec(f.read())
 
+# read the contents of your README file into long_description
+this_directory = path.abspath(path.dirname(__file__))
+
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()    
+
 opts = dict(name='fishersapi',
             maintainer=MAINTAINER,
             maintainer_email=MAINTAINER_EMAIL,
             description=DESCRIPTION,
-            long_description=LONG_DESCRIPTION,
-            long_description_content_type=LONG_DESCRIPTION_CONTENT_TYPE, # this allows current GitHub README.md to be rendeder on PyPi
+            long_description=long_description,
+            long_description_content_type='text/markdown',
             url=URL,
             download_url=DOWNLOAD_URL,
             license=LICENSE,
