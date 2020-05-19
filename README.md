@@ -10,14 +10,15 @@ The fast version of the test is computed using the package `fisher` developed by
  - https://github.com/brentp/fishers_exact_test
 
 ## Installation
-The package is compatible with Python 2.7 or Python 3.6 and can be cloned or installed directly.
+The package is compatible with Python 2.7 or Python 3.6 and can be installed from PyPI or cloned and installed directly.
 
 ```bash
-pip install git+https://github.com/agartland/fishersapi.git
+pip install fishersapi
 ```
 
 ## Example
 ```python
+import fishersapi
 n = 50
 df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23', 'TRAV11', 'TRAV6'], n),
                    'JA':np.random.choice(['TRAJ4', 'TRAJ2', 'TRAJ3','TRAJ5', 'TRAJ21', 'TRAJ13'], n),
@@ -26,5 +27,5 @@ df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23',
 df = df.assign(Count=1)
 df.loc[:10, 'Count'] = 15
 
-resDf = fishers_frame(df, ['VA', 'JA', 'VB', 'JB'], count_col=None, alternative='two-sided')
+res = fishersapi.fishers_frame(df, ['VA', 'JA', 'VB', 'JB'], count_col=None, alternative='two-sided')
 ```
