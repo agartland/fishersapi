@@ -7,7 +7,7 @@ ver_file = os.path.join('fishersapi', 'version.py')
 with open(ver_file) as f:
     exec(f.read())
 
-opts = dict(name='fisherapiX', # replace 'fisherapitest' with NAME once you are ready to upload to PyPi 
+opts = dict(name='fishersapi',
             maintainer=MAINTAINER,
             maintainer_email=MAINTAINER_EMAIL,
             description=DESCRIPTION,
