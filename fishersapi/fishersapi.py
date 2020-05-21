@@ -12,7 +12,8 @@ except ImportError:
     SM= False
 
 __all__ = ['fishers_vec',
-           'fishers_frame']
+           'fishers_frame',
+           'adjustnonnan']
 
 def _add_docstring(doc):
     def dec(obj):
