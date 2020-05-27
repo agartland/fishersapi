@@ -4,4 +4,5 @@ from .fishersapi import *
 from .fishersapi import _scipy_fishers_vec
 
 __all__ = ['fishers_vec',
-           'fishers_frame']
+           'fishers_frame',
+           'adjustnonnan']
