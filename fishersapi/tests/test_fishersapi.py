@@ -30,6 +30,17 @@ def test_fishers_vec():
     npt.assert_allclose(ORs, scipy_ORs, rtol=1e-4)
     npt.assert_allclose(pvalues, scipy_pvalues, rtol=1e-4)
 
+def test_fishers_vec_minn():
+    """Testing the vectorized version against scipy on random data."""
+    a, b, c, d = _gen_rand_abcd()
+    n = len(a)
+    
+    counts = a + b + c + d
+    gtmin = np.sum(counts >= np.median(counts))
+    for alt in ['two-sided', 'less', 'greater']:
+        ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative=alt, min_n=np.median(counts))
+        npt.assert_equal(gtmin, (~np.isnan(pvalues)).sum())
+        
 def test_integers():
     OR, pvalue = fishersapi.fishers_vec(10, 2, 15, 3)
     assert np.isscalar(OR)

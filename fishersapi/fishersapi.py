@@ -50,6 +50,9 @@ a, b, c, d : shape (n,) ndarrays
 alternative : string
     Specfies the alternative hypothesis (similar to scipy.fisher_exact)
     Options: 'two-sided', 'less', 'greater' where less is "left-tailed"
+min_n : int
+    Minimum total number of counts to trigger testing a table.
+    Allows skipping of tables that are unlikely to be significant.
 
 Returns
 -------
@@ -64,7 +67,7 @@ try:
     # print_function("Using Cython-powered Fisher's exact test")
 
     @_add_docstring(fishers_vec_doc)
-    def fishers_vec(a, b, c, d, alternative='two-sided'):
+    def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
         scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
         a = np.asarray(a).ravel()
         b = np.asarray(b).ravel()
@@ -78,13 +81,23 @@ try:
             warnings.simplefilter('ignore')
             OR = (a*d) / (b*c)
 
-        res = fisher.pvalue_npy(a.astype(np.uint), b.astype(np.uint), c.astype(np.uint), d.astype(np.uint))
+        n = a + b + c + d
+        ind = n >= min_n
+
+        tmp_res = fisher.pvalue_npy(a[ind].astype(np.uint),
+                                    b[ind].astype(np.uint),
+                                    c[ind].astype(np.uint),
+                                    d[ind].astype(np.uint))
+        res = np.nan * np.ones(len(a))
         if alternative in ['two-sided', 'two-tailed']:
-            out = (OR, res[2])
+            res[ind] = tmp_res[2]
+            out = (OR, res)
         elif alternative in ['less', 'left-tailed']:
-            out = (OR, res[0])
+            res[ind] = tmp_res[0]
+            out = (OR, res)
         elif alternative in ['greater', 'right-tailed']:
-            out = (OR, res[1])
+            res[ind] = tmp_res[1]
+            out = (OR, res)
         else:
             print_function('Please specify an alternative: two-sided, less, or greater')
             out = OR, np.nan * np.zeros((len(a), 1))
@@ -97,7 +110,7 @@ except ImportError:
     print_function("Using scipy.stats Fisher's exact test (slow)")
 
     @_add_docstring(fishers_vec_doc)
-    def fishers_vec(a, b, c, d, alternative='two-sided'):
+    def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
         scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
 
         a = np.asarray(a).ravel()
@@ -113,7 +126,13 @@ except ImportError:
             warnings.simplefilter('ignore')
             OR = (a*d) / (b*c)
 
-        p = np.asarray([stats.fisher_exact([[aa, bb], [cc, dd]], alternative=alternative)[1] for aa, bb, cc, dd in zip(a, b, c, d)])
+        n = a + b + c + d
+        ind = n >= min_n
+
+        p_tmp = np.asarray([stats.fisher_exact([[aa, bb], [cc, dd]], alternative=alternative)[1] for aa, bb, cc, dd in zip(a[ind], b[ind], c[ind], d[ind])])
+
+        p = np.nan * np.ones(len(a))
+        p[ind] = p_tmp
 
         if scalar:
             out = (OR[0], p[0])
