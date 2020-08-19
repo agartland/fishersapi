@@ -213,7 +213,8 @@ def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='tw
     res = pd.DataFrame(res)
 
     """Drop rows that have fewer than min_n X+Y+ counts for efficiency"""
-    res = res.loc[res['X+Y+'] >= min_n]
+    if min_n > 0:
+        res = res.loc[res['X+Y+'] >= min_n]
 
     OR, pvalue = fishers_vec(res['X+Y+'].values,
                              res['X+Y-'].values,
