@@ -105,9 +105,9 @@ try:
             out = (out[0][0], out[1][0])
         return out
     
-except ImportError:
+except (ImportError, ValueError):
     from scipy import stats
-    print_function("Using scipy.stats Fisher's exact test (slow)")
+    print_function("Using scipy.stats Fisher's exact test (1000x slower)")
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
