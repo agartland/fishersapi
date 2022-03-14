@@ -64,7 +64,7 @@ p : shape (n,) ndarray
 try:
     """Attempt to use the fisher library (cython) if available (>1000x speedup)"""
     import fisher
-    # print_function("Using Cython-powered Fisher's exact test")
+    # print("Using Cython-powered Fisher's exact test")
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
@@ -99,7 +99,7 @@ try:
             res[ind] = tmp_res[1]
             out = (OR, res)
         else:
-            print_function('Please specify an alternative: two-sided, less, or greater')
+            print('Please specify an alternative: two-sided, less, or greater')
             out = OR, np.nan * np.zeros((len(a), 1))
         if scalar:
             out = (out[0][0], out[1][0])
@@ -107,7 +107,7 @@ try:
     
 except (ImportError, ValueError):
     from scipy import stats
-    print_function("Using scipy.stats Fisher's exact test (1000x slower)")
+    print("Using scipy.stats Fisher's exact test (1000x slower)")
 
     @_add_docstring(fishers_vec_doc)
     def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
