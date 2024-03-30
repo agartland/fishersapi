@@ -4,6 +4,7 @@ import pandas as pd
 import warnings
 from scipy import stats
 import itertools
+from .fisher_numba import fishers_vec_pvalue
 
 try:
     import statsmodels.api as sm
@@ -12,6 +13,7 @@ except ImportError:
     SM= False
 
 __all__ = ['fishers_vec',
+           'numba_fishers_vec',
            'fishers_frame',
            'adjustnonnan']
 
@@ -139,6 +141,41 @@ except (ImportError, ValueError):
         else:
             out = (OR, p)
         return out
+
+@_add_docstring(fishers_vec_doc)
+def numba_fishers_vec(a, b, c, d, alternative='two-sided', min_n=0, pseudocount=None):
+    scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
+
+    a = np.asarray(a, dtype=np.int64).ravel()
+    b = np.asarray(b, dtype=np.int64).ravel()
+    c = np.asarray(c, dtype=np.int64).ravel()
+    d = np.asarray(d, dtype=np.int64).ravel()
+
+    assert len(a) == len(b)
+    assert len(a) == len(c)
+    assert len(a) == len(d)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        OR = (a*d) / (b*c)
+    
+    if not pseudocount is None:
+        ORreg = ((a + pseudocount)*(d + pseudocount)) / ((b + pseudocount)*(c + pseudocount))
+
+    n = a + b + c + d
+    ind = n >= min_n
+
+    alt = {'two-sided':2, 'less':-1, 'greater':1}
+    p_tmp = fishers_vec_pvalue(a[ind], b[ind], c[ind], d[ind], alt[alternative])
+
+    p = np.nan * np.ones(len(a))
+    p[ind] = p_tmp
+
+    if scalar:
+        out = (OR[0], p[0])
+    else:
+        out = (OR, p)
+    return out
     
 def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='two-sided', adj_method=None, min_n=0):
     """Prepare counts tables and perform rapid testing for associations

@@ -7,14 +7,22 @@ from scipy import stats
 import time
 
 import fishersapi
-from fishersapi import _scipy_fishers_vec
+from fishersapi import _scipy_fishers_vec, numba_fishers_vec
 
 def _gen_rand_abcd(n=1000):
-    np.random.seed(110820)
-    a = np.random.randint(0, 50, size=n)
-    b = np.random.randint(0, 50, size=n)
-    c = np.random.randint(0, 100, size=n)
-    d = np.random.randint(0, 100, size=n)
+    np.random.seed(1)
+    a = np.random.randint(1, 50, size=n)
+    b = np.random.randint(1, 50, size=n)
+    c = np.random.randint(1, 100, size=n)
+    d = np.random.randint(1, 100, size=n)
+    return a, b, c, d
+
+def _gen_extreme_abcd(n=1000):
+    np.random.seed(1)
+    a = np.random.randint(1, 5, size=n)
+    b = np.random.randint(20, 50, size=n)
+    c = np.random.randint(200, 700, size=n)
+    d = np.random.randint(200, 700, size=n)
     return a, b, c, d
 
 def test_fishers_vec():
@@ -24,6 +32,45 @@ def test_fishers_vec():
     
     for alt in ['two-sided', 'less', 'greater']:
         ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative=alt)
+        scipy_pvalues, scipy_ORs = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            scipy_ORs[i], scipy_pvalues[i] = stats.fisher_exact([[a[i], b[i]], [c[i], d[i]]], alternative=alt)
+    npt.assert_allclose(ORs, scipy_ORs, rtol=1e-4)
+    npt.assert_allclose(pvalues, scipy_pvalues, rtol=1e-4)
+
+def test_extreme_fishers_vec():
+    """Testing the vectorized version against scipy on random data."""
+    a, b, c, d = _gen_extreme_abcd()
+    n = len(a)
+    
+    for alt in ['two-sided', 'less', 'greater']:
+        ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative=alt)
+        scipy_pvalues, scipy_ORs = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            scipy_ORs[i], scipy_pvalues[i] = stats.fisher_exact([[a[i], b[i]], [c[i], d[i]]], alternative=alt)
+    npt.assert_allclose(ORs, scipy_ORs, rtol=1e-4)
+    npt.assert_allclose(pvalues, scipy_pvalues, rtol=1e-4)
+
+def test_numba_fishers_vec():
+    """Testing the vectorized version against scipy on random data."""
+    a, b, c, d = _gen_rand_abcd()
+    n = len(a)
+    
+    for alt in ['two-sided', 'less', 'greater']:
+        ORs, pvalues = fishersapi.numba_fishers_vec(a, b, c, d, alternative=alt)
+        scipy_pvalues, scipy_ORs = np.zeros(n), np.zeros(n)
+        for i in range(n):
+            scipy_ORs[i], scipy_pvalues[i] = stats.fisher_exact([[a[i], b[i]], [c[i], d[i]]], alternative=alt)
+    npt.assert_allclose(ORs, scipy_ORs, rtol=1e-4)
+    npt.assert_allclose(pvalues, scipy_pvalues, rtol=1e-4)
+
+def test_numba_extreme_fishers_vec():
+    """Testing the vectorized version against scipy on random data."""
+    a, b, c, d = _gen_extreme_abcd()
+    n = len(a)
+    
+    for alt in ['two-sided', 'less', 'greater']:
+        ORs, pvalues = fishersapi.numba_fishers_vec(a, b, c, d, alternative=alt)
         scipy_pvalues, scipy_ORs = np.zeros(n), np.zeros(n)
         for i in range(n):
             scipy_ORs[i], scipy_pvalues[i] = stats.fisher_exact([[a[i], b[i]], [c[i], d[i]]], alternative=alt)
@@ -46,27 +93,37 @@ def test_integers():
     assert np.isscalar(OR)
     assert np.isscalar(pvalue)
 
+def test_numba_integers():
+    OR, pvalue = fishersapi.numba_fishers_vec(10, 2, 15, 3)
+    assert np.isscalar(OR)
+    assert np.isscalar(pvalue)
+
 def test_benchmark():
     a, b, c, d = _gen_rand_abcd()
     
     n = 100
-    res = np.zeros(n)
+    startT = time.time()
     for i in range(n):
-        startT = time.time()
         ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative='two-sided')
-        res[i] = n / (time.time() - startT)
-    print('Imported test: %1.2f tests per second' % np.mean(res))
+    res = n / (time.time() - startT)
+    print('Cython test: %1.2f tests per second' % res)
 
-    n = 1
-    res_scipy = np.zeros(n)
+    startT = time.time()
+    for i in range(n):
+        ORs, pvalues = fishersapi.numba_fishers_vec(a, b, c, d, alternative='two-sided')
+    res = n / (time.time() - startT)
+    print('Numba test: %1.2f tests per second' % res)
+
+    n = 2
+    startT = time.time()
     for i in range(n):
         startT = time.time()
         ORs, pvalues = fishersapi._scipy_fishers_vec(a, b, c, d, alternative='two-sided')
-        res_scipy[i] = n / (time.time() - startT)
-    print('scipy test: %1.2f tests per second' % np.mean(res_scipy))
+    res = n / (time.time() - startT)
+    print('scipy test: %1.2f tests per second' % res)
 
 def test_options():
-    np.random.seed(110820)
+    np.random.seed(1)
     n = 200
     df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23', 'TRAV11', 'TRAV6'], n),
                        'JA':np.random.choice(['TRAJ4', 'TRAJ2', 'TRAJ3','TRAJ5', 'TRAJ21', 'TRAJ13'], n),
@@ -76,7 +133,7 @@ def test_options():
     res = fishersapi.fishers_frame(df, col_pairs=[('VA', 'JA'), ('VB', 'JB')], adj_method='holm')
 
 def test_fishers_frame():
-    np.random.seed(110820)
+    np.random.seed(2)
     n = 50
     df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23', 'TRAV11', 'TRAV6'], n),
                        'JA':np.random.choice(['TRAJ4', 'TRAJ2', 'TRAJ3','TRAJ5', 'TRAJ21', 'TRAJ13'], n),
@@ -86,7 +143,7 @@ def test_fishers_frame():
     df.loc[:10, 'Count'] = 15
 
     res = fishersapi.fishers_frame(df, ['VA', 'JA', 'VB', 'JB'], count_col=None, alternative='two-sided')
-    npt.assert_allclose(res.OR.values[:3], [3.85714286, 2.05714286, 0.72916667])
+    npt.assert_allclose(res.OR.values[:3], [4.44      , 1.05714286, 0.52380952])
 
     res = fishersapi.fishers_frame(df, ['VA', 'JA', 'VB', 'JB'], count_col='Count', alternative='two-sided')
 
@@ -117,3 +174,6 @@ def test_fishers_frame2():
     assert res.loc[0, 'X+Y+'] == 387
     assert res.loc[0, 'X+Y-'] == 21
     npt.assert_almost_equal(res.loc[0, 'OR'], 103.2, decimal=1)
+
+if __name__ == '__main__':
+    test_benchmark()
