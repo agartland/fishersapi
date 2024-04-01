@@ -1,6 +1,5 @@
 from math import log, exp, lgamma, nan, inf
 from numba import jit_module
-# from numba.pycc import CC
 from numba import jit
 import numpy as np
 
@@ -12,10 +11,8 @@ Removed ahead-of-time (AOT) ompilation which seems to be deprecated from numba,
 and instead added standard JIT for the functions.
 Also added vector support for a, b, c, d"""
 
-# cc = CC('fast_fisher_compiled')
-
 jit_kwargs = dict(nopython=True,
-                    cache=True,
+                    cache=False,
                     nogil=True)
 
 def _maxn():
@@ -35,9 +32,6 @@ MAXN = _maxn()
 
 
 # ======================== Full Test ========================
-
-from numba import jit
-
 
 @jit('Tuple((f8, f8, f8))(i8, i8, i8, i8)', **jit_kwargs)
 def mlnTest2(a, ab, ac, abcd):
@@ -310,24 +304,4 @@ def fishers_vec_pvalue(a, b, c, d, alternative):
             raise ValueError("`alternative` should be one of {2='two-sided', -1='less', 1='greater'}")
 
     return pvalue
-
-
-def odds_ratio(a: int, b: int, c: int, d: int) -> float:
-    """
-    Calculate odds ratio of a contingency table.
-
-    :param a: row 1 col 1
-    :param b: row 1 col 2
-    :param c: row 2 col 1
-    :param d: row 2 col 2
-    :return: odds ratio (this is prior odds ratio and not a posterior estimate.)
-    """
-    if a + b == 0 or c + d == 0 or a + c == 0 or b + d == 0:
-        return nan
-
-    if not (c > 0 and b > 0):
-        return inf
-
-    return (a * d) / (c * b)
-
 

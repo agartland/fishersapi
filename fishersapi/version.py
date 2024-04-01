@@ -1,9 +1,8 @@
-from __future__ import absolute_import, division, print_function
 from os import path
 
 # Format expected by setup.py and doc/source/conf.py: string of form "X.Y.Z"
-_version_major = 0
-_version_minor = 5
+_version_major = 1
+_version_minor = 0
 _version_micro = ''  # use '' for first of series, number for 1 and above
 
 #_version_extra = 'dev'
@@ -44,4 +43,4 @@ MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
 PACKAGE_DATA = {}
-REQUIRES = ['numpy', 'scipy', 'pandas', 'fisher', 'statsmodels']
+REQUIRES = ['numpy', 'scipy', 'pandas', 'statsmodels']

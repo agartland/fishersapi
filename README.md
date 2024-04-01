@@ -4,13 +4,10 @@
 A package for applying a fast implementation of Fisher's exact test to observations in a pandas DataFrame.
 
 Contingency tables are computed based on all pairs of columns in cols and all pairs of unique values within the columns.
-The results are tested against scipy.stats.fishers_exact and fallback on scipy if the faster brentp/fishers_exact_test (~1000x faster) is not installed.
-The fast version of the test is computed using the package `fisher` developed by Haibao Tang and Brent Pedersen, which uses cython.
- - https://pypi.python.org/pypi/fisher/
- - https://github.com/brentp/fishers_exact_test
+The results are tested against scipy.stats.fishers_exact and fallback on scipy if numba is not avilable.
 
 ## Installation
-The package is compatible with Python 2.7 or Python 3.6 and can be installed from PyPI or cloned and installed directly.
+The package is compatible with Python 3 and can be installed from PyPI or cloned and installed directly.
 
 ```bash
 pip install fishersapi
@@ -19,6 +16,14 @@ pip install fishersapi
 ## Example
 ```python
 import fishersapi
+
+a = np.random.randint(1, 50, size=n)
+b = np.random.randint(1, 50, size=n)
+c = np.random.randint(1, 100, size=n)
+d = np.random.randint(1, 100, size=n)
+    
+ORs, pvalues = fishersapi.fishers_vec(a, b, c, d, alternative='two-sided')
+
 n = 50
 df = pd.DataFrame({'VA':np.random.choice(['TRAV14', 'TRAV12', 'TRAV3', 'TRAV23', 'TRAV11', 'TRAV6'], n),
                    'JA':np.random.choice(['TRAJ4', 'TRAJ2', 'TRAJ3','TRAJ5', 'TRAJ21', 'TRAJ13'], n),

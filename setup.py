@@ -35,7 +35,6 @@ opts = dict(name='fishersapi',
 install_requires = ['numpy',
                     'pandas',
                     'scipy',
-                    'fisher',
                     'statsmodels'] 
 
 if __name__ == '__main__':

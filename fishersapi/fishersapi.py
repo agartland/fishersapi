@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
 import warnings
@@ -10,10 +9,9 @@ try:
     import statsmodels.api as sm
     SM = True
 except ImportError:
-    SM= False
+    SM = False
 
 __all__ = ['fishers_vec',
-           'numba_fishers_vec',
            'fishers_frame',
            'adjustnonnan']
 
@@ -37,17 +35,13 @@ fishers_vec_doc = """Vectorized Fisher's exact test performs n tests
 on 4 length n numpy vectors a, b, c, and d representing
 the 4 elements of a 2x2 contigency table.
 
-Wrapper around fisher.pvalue_npy found in:
-Fast Fisher's Exact Test (Haibao Tang, Brent Pedersen)
-https://pypi.python.org/pypi/fisher/
-https://github.com/brentp/fishers_exact_test
-
-Loop and test are performed in C (>1000x speed-up)
+Uses numba implementation for 100x speed-up over scipy.
+Results are tested against scipy.
 
 Parameters
 ----------
 a, b, c, d : shape (n,) ndarrays
-    Vector of counts (will be cast as uint8 for operation)
+    Vector of counts (will be cast as int64 for operation)
     Also accepts scalars, in which case output will also be a scalar.
 alternative : string
     Specfies the alternative hypothesis (similar to scipy.fisher_exact)
@@ -55,6 +49,8 @@ alternative : string
 min_n : int
     Minimum total number of counts to trigger testing a table.
     Allows skipping of tables that are unlikely to be significant.
+pseudocount : float
+    Optionally add a psuedocount for OR estimation (adds to a, b, c, and d)
 
 Returns
 -------
@@ -64,47 +60,43 @@ p : shape (n,) ndarray
     Vector of p-values asspciated with each test and the alternative hypothesis"""
 
 try:
-    """Attempt to use the fisher library (cython) if available (>1000x speedup)"""
-    import fisher
-    # print("Using Cython-powered Fisher's exact test")
+    """Attempt to use numba if available (~100x speedup)"""
+    import numba
 
     @_add_docstring(fishers_vec_doc)
-    def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0):
+    def fishers_vec(a, b, c, d, alternative='two-sided', min_n=0, pseudocount=None):
         scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
-        a = np.asarray(a).ravel()
-        b = np.asarray(b).ravel()
-        c = np.asarray(c).ravel()
-        d = np.asarray(d).ravel()
+
+        a = np.asarray(a, dtype=np.int64).ravel()
+        b = np.asarray(b, dtype=np.int64).ravel()
+        c = np.asarray(c, dtype=np.int64).ravel()
+        d = np.asarray(d, dtype=np.int64).ravel()
 
         assert len(a) == len(b)
         assert len(a) == len(c)
         assert len(a) == len(d)
+
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             OR = (a*d) / (b*c)
+        
+        if not pseudocount is None:
+            ORreg = ((a + pseudocount)*(d + pseudocount)) / ((b + pseudocount)*(c + pseudocount))
+            OR = ORreg
 
         n = a + b + c + d
         ind = n >= min_n
 
-        tmp_res = fisher.pvalue_npy(a[ind].astype(np.uint),
-                                    b[ind].astype(np.uint),
-                                    c[ind].astype(np.uint),
-                                    d[ind].astype(np.uint))
-        res = np.nan * np.ones(len(a))
-        if alternative in ['two-sided', 'two-tailed']:
-            res[ind] = tmp_res[2]
-            out = (OR, res)
-        elif alternative in ['less', 'left-tailed']:
-            res[ind] = tmp_res[0]
-            out = (OR, res)
-        elif alternative in ['greater', 'right-tailed']:
-            res[ind] = tmp_res[1]
-            out = (OR, res)
-        else:
-            print('Please specify an alternative: two-sided, less, or greater')
-            out = OR, np.nan * np.zeros((len(a), 1))
+        alt = {'two-sided':2, 'less':-1, 'greater':1}
+        p_tmp = fishers_vec_pvalue(a[ind], b[ind], c[ind], d[ind], alt[alternative])
+
+        p = np.nan * np.ones(len(a))
+        p[ind] = p_tmp
+
         if scalar:
-            out = (out[0][0], out[1][0])
+            out = (OR[0], p[0])
+        else:
+            out = (OR, p)
         return out
     
 except (ImportError, ValueError):
@@ -142,41 +134,7 @@ except (ImportError, ValueError):
             out = (OR, p)
         return out
 
-@_add_docstring(fishers_vec_doc)
-def numba_fishers_vec(a, b, c, d, alternative='two-sided', min_n=0, pseudocount=None):
-    scalar = np.isscalar(a) and np.isscalar(b) and np.isscalar(c) and np.isscalar(d)
 
-    a = np.asarray(a, dtype=np.int64).ravel()
-    b = np.asarray(b, dtype=np.int64).ravel()
-    c = np.asarray(c, dtype=np.int64).ravel()
-    d = np.asarray(d, dtype=np.int64).ravel()
-
-    assert len(a) == len(b)
-    assert len(a) == len(c)
-    assert len(a) == len(d)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        OR = (a*d) / (b*c)
-    
-    if not pseudocount is None:
-        ORreg = ((a + pseudocount)*(d + pseudocount)) / ((b + pseudocount)*(c + pseudocount))
-
-    n = a + b + c + d
-    ind = n >= min_n
-
-    alt = {'two-sided':2, 'less':-1, 'greater':1}
-    p_tmp = fishers_vec_pvalue(a[ind], b[ind], c[ind], d[ind], alt[alternative])
-
-    p = np.nan * np.ones(len(a))
-    p[ind] = p_tmp
-
-    if scalar:
-        out = (OR[0], p[0])
-    else:
-        out = (OR, p)
-    return out
-    
 def fishers_frame(df, cols=None, col_pairs=None, count_col=None, alternative='two-sided', adj_method=None, min_n=0):
     """Prepare counts tables and perform rapid testing for associations
     between two or more categorical variables (columns) of a DataFrame
